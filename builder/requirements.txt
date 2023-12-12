@@ -3,7 +3,7 @@
 
 runpod==1.4.0
 hf_transfer
-
+Pillow
 diffusers==0.24.0
 transformers==4.34.0
 accelerate==0.23.0

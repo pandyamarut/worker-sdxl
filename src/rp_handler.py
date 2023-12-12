@@ -42,7 +42,7 @@ class ModelHandler:
             "stabilityai/stable-diffusion-xl-base-1.0", vae=vae,
             torch_dtype=torch.float16, variant="fp16", use_safetensors=True, add_watermarker=False
         )
-        base_pipe = base_pipe.to("cuda", silence_dtype_warnings=True)
+        base_pipe = base_pipe.to("cuda")
         base_pipe.enable_xformers_memory_efficient_attention()
         return base_pipe
 
@@ -53,7 +53,7 @@ class ModelHandler:
             "stabilityai/stable-diffusion-xl-refiner-1.0", vae=vae,
             torch_dtype=torch.float16, variant="fp16", use_safetensors=True, add_watermarker=False
         )
-        refiner_pipe = refiner_pipe.to("cuda", silence_dtype_warnings=True)
+        refiner_pipe = refiner_pipe.to("cuda")
         refiner_pipe.enable_xformers_memory_efficient_attention()
         return refiner_pipe
 
