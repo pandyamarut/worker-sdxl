@@ -158,7 +158,7 @@ class Model:
             denoising_end=denoising_frac,
             guidance_scale=guidance_scale,
             output_type="latent" if use_refiner else "pil",
-        ).images[0]
+        ).images
         scheduler = self.pipe.scheduler
         if use_refiner:
             self.refiner.scheduler = scheduler
@@ -171,7 +171,7 @@ class Model:
                 denoising_start=denoising_frac,
                 guidance_scale=guidance_scale,
                 image=image[None, :],
-            ).images[0]
+            ).images
         # b64_results = self.convert_to_b64(image)
         end_time = time.time() - start_time
 
