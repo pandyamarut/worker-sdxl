@@ -10,4 +10,10 @@ triton
 huggingface-hub
 hf_transfer
 hf_xet
-setuptools 
+setuptools
+boto3
+pillow
+datetime
+pyOpenSSL
+cryptography
+nanoid
