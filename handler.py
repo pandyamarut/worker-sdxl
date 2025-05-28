@@ -1,5 +1,6 @@
 import os
 import base64
+import io
 
 import torch
 from diffusers import (
@@ -20,6 +21,10 @@ from diffusers import (
 import runpod
 from runpod.serverless.utils import rp_upload, rp_cleanup
 from runpod.serverless.utils.rp_validator import validate
+from utils import upload_to_r2
+import uuid
+from nanoid import generate
+from datetime import datetime
 
 from schemas import INPUT_SCHEMA
 
@@ -82,24 +87,6 @@ class ModelHandler:
 MODELS = ModelHandler()
 
 
-def _save_and_upload_images(images, job_id):
-    os.makedirs(f"/{job_id}", exist_ok=True)
-    image_urls = []
-    for index, image in enumerate(images):
-        image_path = os.path.join(f"/{job_id}", f"{index}.png")
-        image.save(image_path)
-
-        if os.environ.get("BUCKET_ENDPOINT_URL", False):
-            image_url = rp_upload.upload_image(job_id, image_path)
-            image_urls.append(image_url)
-        else:
-            with open(image_path, "rb") as image_file:
-                image_data = base64.b64encode(image_file.read()).decode("utf-8")
-                image_urls.append(f"data:image/png;base64,{image_data}")
-
-    rp_cleanup.clean([f"/{job_id}"])
-    return image_urls
-
 
 def make_scheduler(name, config):
     return {
@@ -132,6 +119,7 @@ def generate_image(job):
     # Original (strict) behaviour – assume the expected single wrapper exists.
     # -------------------------------------------------------------------------
     job_input = job["input"]
+    img_format = job_input.get("image_format", "png")
 
     print("[generate_image] job['input'] payload:")
     try:
@@ -210,18 +198,30 @@ def generate_image(job):
                 "error": f"RuntimeError: {err}, Stack Trace: {err.__traceback__}",
                 "refresh_worker": True,
             }
+    # Convert to base64
+        buffered = io.BytesIO()
+        now = datetime.now()
+        filename = f"gen-images/{now.month}/{now.day}/{generate(size=10)}/{uuid.uuid4()}.{img_format}"
+        if img_format == "png":
+            output.save(buffered, format="PNG")
+            content_type = "image/png"
+        elif img_format == "jpeg" or img_format == "jpg":
+            output.convert("RGB")
+            # Convert to RGB for JPEG
+            output.save(buffered, format="JPEG")
+            content_type = "image/jpeg"
+        buffered.seek(0)
+    
+    
+    url = upload_to_r2(buffered.getvalue(), filename, content_type)
 
-    image_urls = _save_and_upload_images(output, job["id"])
 
     results = {
-        "images": image_urls,
-        "image_url": image_urls[0],
-        "seed": job_input["seed"],
+        "status": "success",
+        "message": "Image generated successfully",
+        "image_url": url,
     }
-
-    if starting_image:
-        results["refresh_worker"] = True
-
+    
     return results
 
 
